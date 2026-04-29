@@ -1,0 +1,82 @@
+<!-- This file contains common build logic for most of my mods. -->
+<Project>
+
+    <!-- Compute defaults if unset -->
+    <PropertyGroup>
+        <PackageId Condition="'$(PackageId)' == '__unset__'">Cecer.VintageStory.$(RootNamespace)</PackageId>
+        <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    </PropertyGroup>
+
+    <!-- Set output paths-->
+    <PropertyGroup>
+        <StagingDir>$(MSBuildThisFileDirectory).build/.staging</StagingDir>
+        <ZipOutputDir>$(MSBuildThisFileDirectory)/zips</ZipOutputDir>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <ProjectStage>$(StagingDir)/$(MSBuildProjectName)</ProjectStage>
+        <PackStage>$(StagingDir)/$(MSBuildProjectName).pack</PackStage>
+    </PropertyGroup>
+
+    <!-- Explicit Version enforcement -->
+    <Target Name="Ensure version is explicitly set" BeforeTargets="PrepareForBuild" Condition="'$(Version)' == '0-unset'">
+        <Error Text="Version is not defined. Either set it in the .csproj file of $(MSBuildProjectName) or pass it via /p:Version=VERSION" />
+    </Target>
+
+    <Target Name="StageFiles" DependsOnTargets="Build">
+        <RemoveDir Directories="$(ProjectStage)" />
+        <MakeDir Directories="$(ProjectStage)" />
+
+        <ItemGroup>
+            <ProjectDlls Include="$(TargetDir)/*.dll" />
+            <ProjectPdbs Include="$(TargetDir)/*.pdb" />
+            <ProjectResources Include="resources/**/*" />
+        </ItemGroup>
+
+        <Copy SourceFiles="@(ProjectDlls)" DestinationFolder="$(ProjectStage)" />
+        <Copy SourceFiles="@(ProjectPdbs)" DestinationFolder="$(ProjectStage)" Condition="'$(IncludeDebugSymbols)' == 'true'" />
+        <Copy SourceFiles="@(ProjectResources)"  DestinationFolder="$(ProjectStage)/%(RecursiveDir)" />
+    </Target>
+
+
+    <Target Name="UpdateModInfo" DependsOnTargets="StageFiles">
+        <Message Text="Updating the modinfo for $(MSBuildProjectName)" Importance="high"/>
+        <PropertyGroup>
+            <SafeVersion>$(Version.Replace('"',''))</SafeVersion>
+            <SafeTitle>$(Title.Replace('"',''))</SafeTitle>
+            <SafeDescription>$(Description.Replace('"',''))</SafeDescription>
+            <SafeAuthors>$(Authors.Replace('"',''))</SafeAuthors>
+            <SafeUrl>$(PackageProjectUrl.Replace('"',''))</SafeUrl>
+        </PropertyGroup>
+
+        <Exec Command='dotnet run --project &quot;$(UpdateModInfoProject)&quot; --configuration Debug -- &quot;$(ProjectStage)/modinfo.json&quot; &quot;$(SafeVersion)&quot; &quot;$(SafeTitle)&quot; &quot;$(SafeDescription)&quot; &quot;$(SafeAuthors)&quot; &quot;$(SafeUrl)&quot;' />
+    </Target>
+
+    <Target Name="PackageModZip" AfterTargets="Build" DependsOnTargets="StageFiles;UpdateModInfo">
+        <Message Text="Building $(MSBuildProjectName) as a mod" Importance="high"/>
+
+        <PropertyGroup>
+            <ZipOutputName Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectName)-$(Version)</ZipOutputName>
+            <ZipOutputName Condition="'$(Configuration)' != 'Release'">$(MSBuildProjectName)-$(Configuration)</ZipOutputName>
+        </PropertyGroup>
+
+        <MakeDir Condition="!Exists('$(ZipOutputDir)')" Directories="$(ZipOutputDir)" />
+        <ZipDirectory SourceDirectory="$(ProjectStage)" DestinationFile="$(ZipOutputDir)/$(ZipOutputName).zip" Overwrite="true" />
+    </Target>
+
+    <Import Project="$(MSBuildThisFileDirectory)/.build/secrets.props" Condition="'$(Configuration)' == 'Release' And '$(NexusApiKey)' == '' And Exists('$(MSBuildThisFileDirectory)/.build/secrets.props')" />
+    <Target Name="PublishToNexus" AfterTargets="Build" DependsOnTargets="PackageModZip" Condition="'$(Configuration)' == 'Release'">
+        <Message Text="Preparing to publish to Nexus" Importance="high"/>
+        <Warning Condition="'$(NexusApiKey)' == '' And !Exists('$(MSBuildThisFileDirectory)/.build/secrets.props')" Text="Nexus API key was not provided and .build/secrets.props does not exist. Nexus deployment failed!" />
+        <Warning Condition="'$(NexusApiKey)' == '' And Exists('$(MSBuildThisFileDirectory)/.build/secrets.props')" Text="Nexus API key was not provided. Nexus deployment failed!" />
+
+        <Message Condition="'$(NexusApiKey)' != ''" Text="Creating nuget pack..." />
+        <Exec Condition="'$(NexusApiKey)' != ''" Command="dotnet pack --include-source --no-build --output '$(PackStage)'" />
+
+        <Message Condition="'$(NexusApiKey)' != ''" Text="Pushing pack to Nexus..." />
+        <Exec Condition="'$(NexusApiKey)' != ''" Command="dotnet nuget push '$(PackStage)/$(PackageId).$(PackageVersion).nupkg' --source '$(NexusRepoUrl)' --api-key '$(NexusApiKey)'" />
+        <Message Condition="'$(NexusApiKey)' != ''" Text="Pushing symbols pack to Nexus..." />
+        <Exec Condition="'$(NexusApiKey)' != ''" Command="dotnet nuget push '$(PackStage)/$(PackageId).$(PackageVersion).symbols.nupkg' --source '$(NexusRepoUrl)' --api-key '$(NexusApiKey)'" />
+        <Delete Condition="'$(NexusApiKey)' != ''" Files="$(PackStage)" />
+    </Target>
+</Project>

@@ -1,0 +1,4 @@
+/.staging/
+/UpdateModInfo/bin/
+/UpdateModInfo/obj/
+/secrets.props

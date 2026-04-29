@@ -1,0 +1,79 @@
+<!-- This file contains common build logic for most of my mods. -->
+<Project>
+
+    <!-- Mod Metadata Defaults -->
+    <PropertyGroup>
+        <Authors>Cecer</Authors>
+    </PropertyGroup>
+
+    <!-- Compile Configuration Defaults -->
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <LangVersion>12</LangVersion>
+        <Nullable>enable</Nullable>
+
+        <IncludeDebugSymbols>true</IncludeDebugSymbols>
+        <EmbedAllSources>true</EmbedAllSources>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <OutputPath>bin\$(Configuration)\Mods</OutputPath>
+
+        <!-- Replaced in targets -->
+        <Version>0-unset</Version>
+        <PackageId>__unset__</PackageId>
+    </PropertyGroup>
+
+    <!-- Build Configuration -->
+    <PropertyGroup>
+        <UpdateModInfoProjectDir>$(MSBuildThisFileDirectory)/.build/UpdateModInfo</UpdateModInfoProjectDir>
+        <UpdateModInfoProject>$(UpdateModInfoProjectDir)/UpdateModInfo.csproj</UpdateModInfoProject>
+        <NexusRepoUrl>https://nexus.cecer1.com/repository/nuget-public/index.json</NexusRepoUrl>
+    </PropertyGroup>
+
+    <!-- Game Dependencies -->
+    <ItemGroup>
+        <Reference Include="VintagestoryAPI">
+            <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="VintagestoryLib">
+            <HintPath>$(VINTAGE_STORY)/VintagestoryLib.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="VSEssentials">
+            <HintPath>$(VINTAGE_STORY)/Mods/VSEssentials.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="VSSurvivalMod">
+            <HintPath>$(VINTAGE_STORY)/Mods/VSSurvivalMod.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="VSCreativeMod">
+            <HintPath>$(VINTAGE_STORY)/Mods/VSCreativeMod.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+
+        <Reference Include="0Harmony">
+            <HintPath>$(VINTAGE_STORY)/Lib/0Harmony.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="Mono.Cecil">
+            <HintPath>$(VINTAGE_STORY)\Lib\Mono.Cecil.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+
+        <Reference Include="protobuf-net">
+            <HintPath>$(VINTAGE_STORY)/Lib/protobuf-net.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="Microsoft.Data.Sqlite">
+            <HintPath>$(VINTAGE_STORY)/Lib/Microsoft.Data.Sqlite.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+    </ItemGroup>
+
+    <!-- Misc Dependnecies -->
+    <ItemGroup>
+        <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
+    </ItemGroup>
+
+</Project>
